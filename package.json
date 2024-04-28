@@ -1,0 +1,19 @@
+{
+  "name": "TwitterBot",
+  "version": "1.0.0",
+  "description": "A Node.js Twitter bot that posts daily updates, responds to mentions, and retweets based on specific hashtags.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rukirukiruk/TwitterBot.git"
+  },
+  "author": "rukirukiruk",
+  "dependencies": {
+    "twit": "^2.2.11",
+    "node-cron": "^3.0.0",
+    "dotenv": "^10.0.0"
+  }
+}
