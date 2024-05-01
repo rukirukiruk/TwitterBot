@@ -1,47 +1,48 @@
 require('dotenv').config();
-const winston = require('winston'); // Add winston for logging
+const winston = require('winston'); // Logging library
 
-// Logger configuration
-const logConfiguration = {
-    'transports': [
+// Logger Configuration
+const loggerConfig = {
+    transports: [
         new winston.transports.Console({
-            level: 'info', // Change to 'debug' for detailed logs
+            level: 'info', // Consider 'debug' for in-depth logs
             format: winston.format.combine(
                 winston.format.timestamp({
                    format: 'MMM-DD-YYYY HH:mm:ss'
-               }),
+                }),
                 winston.format.align(),
+                // Custom log format
                 winston.format.printf(info => `${info.level}: ${[info.timestamp]}: ${info.message}`),
             )
         }),
-        // File transport can be added for logging into a file
+        // Potential file logging can be added here
     ]
 };
 
-const logger = winston.createLogger(logConfiguration);
+const logger = winston.createLogger(loggerConfig);
 
-// Attempting to implement a simple logging and error handling example
 try {
-    // Example of using logger
-    logger.info('Initializing application configuration');
+    logger.info('Starting application setup');
 
-    const config = {
+    // App Configuration Object
+    const appConfig = {
         twitter: {
             apiKey: process.env.TWITTER_API_KEY,
-            apiSecretKey: process.env.TWITTER_API_SECRET_KEY,
+            apiSecret: process.env.TWITTER_API_SECRET_KEY,
             accessToken: process.env.TWITTER_ACCESS_TOKEN,
             accessTokenSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET
         },
         cron: {
+            // CRON schedule from env or every hour
             schedule: process.env.CRON_SCHEDULE || '0 * * * *'
         },
+        // Split hashtags or default to JavaScript related if unrealized
         hashtags: process.env.HASHTAGS ? process.env.HASHTAGS.split(',') : ['javascript', 'nodejs']
     };
 
-    // Log configuration initialization success
-    logger.info('Configuration initialized successfully');
+    logger.info('App setup successful');
 
-    module.exports = config;
+    module.exports = appConfig;
 } catch (error) {
-    logger.error('Failed to initialize application configuration', error);
+    logger.error('Error during application setup', error);
 }
