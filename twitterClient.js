@@ -11,12 +11,13 @@ const twitterClient = new Twit({
 let tweetsCache = new Map();
 
 function sendTweet(tweetText) {
-  if (tweetsCache.has(tweetText) && (Date.now() - tweetsCache.get(tweetText)) < 3600000) {
+  const tweetCooldownPeriod = 3600000; 
+  if (tweetsCache.has(tweetText) && (Date.now() - tweetsCache.get(tweetText)) < tweetCooldownPeriod) {
     console.log('Tweet was already sent recently:', tweetText);
     return;
   }
 
-  twitterClient.post('statuses/update', { status: tweetText }, (err, data, response) => {
+  twitterClient.post('statuses/update', { status: tweetText }, (err, data) => {
     if (err) {
       console.error('Error sending tweet:', err);
     } else {
@@ -29,9 +30,9 @@ function sendTweet(tweetText) {
 function clearOldCacheEntries() {
   const expiry = 3600000;
   const now = Date.now();
-  tweetsCache.forEach((value, key) => {
-    if (now - value > expiry) {
-      tweetsCache.delete(key);
+  tweetsCache.forEach((timestamp, tweet) => {
+    if (now - timestamp > expiry) {
+      tweetsCache.delete(tweet);
     }
   });
 }
