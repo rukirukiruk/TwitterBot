@@ -57,8 +57,39 @@ const scheduleTweets = async () => {
     });
 };
 
+const autoRespondToMentions = async () => {
+    const replyText = "Thanks for mentioning us! How can we help you today?"; // Customize this message
+    let sinceId;
+
+    try {
+        const mentions = await twitterClient.v2.mentions({
+            since_id: sinceId,
+            max_results: 5 // Adjust as needed
+        });
+
+        mentions.data.forEach(async (mention) => {
+            try {
+                await twitterClient.v2.reply(replyText, mention.id);
+                console.log(`Replied to mention ${mention.id}`);
+            } catch (error) {
+                console.error(`Failed to reply to mention ${mention.id}:`, error.message);
+            }
+        });
+
+        sinceId = mentions.meta.newest_id;
+    } catch (error) {
+        console.error('Failed to fetch mentions:', error.message);
+    }
+
+    // Reschedule this task to run, say, every minute
+    setTimeout(autoRespondToMentions, 60 * 1000);
+};
+
+// Initiate scheduled activities
 scheduleTweets();
+autoRespondToMentions();
 
 module.exports = {
-    scheduleTweets
+    scheduleTweets,
+    autoRespondToMentions
 };
