@@ -13,12 +13,22 @@ const twitterClient = new TwitterApi({
     accessSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
 });
 
+// Custom log function for standardized console output and potential future logging strategies
+const log = (message, isError = false) => {
+    const timestamp = new Date().toISOString();
+    if (isError) {
+        console.error(`[${timestamp}] ERROR: ${message}`);
+    } else {
+        console.log(`[${timestamp}] ${message}`);
+    }
+};
+
 const readTweetsToSchedule = async () => {
     try {
         const data = await fs.readFile('./scheduled_tweets.json', 'utf8');
         return JSON.parse(data);
     } catch (error) {
-        console.error('Error reading scheduled tweets file. Ensure the file exists and it is in correct JSON format:', error.message);
+        log('Error reading scheduled tweets file. Ensure the file exists and it is in correct JSON format: ' + error.message, true);
         return [];
     }
 };
@@ -30,12 +40,12 @@ const scheduleTweets = async () => {
         const { time, content } = tweet;
 
         if (!cron.validate(time)) {
-            console.error(`Invalid cron time format for tweet: "${content}". Please review it.`);
+            log(`Invalid cron time format for tweet: "${content}". Please review it.`, true);
             return;
         }
 
         if (!content) {
-            console.error(`Missing content for tweet scheduled at ${time}. Skipping.`);
+            log(`Missing content for tweet scheduled at ${time}. Skipping.`, true);
             return;
         }
 
@@ -43,16 +53,16 @@ const scheduleTweets = async () => {
             cron.schedule(time, async () => {
                 try {
                     const response = await twitterClient.v1.tweet(content);
-                    console.log('Tweet posted:', response);
+                    log('Tweet posted: ' + JSON.stringify(response));
                 } catch (error) {
-                    console.error('Failed to post tweet:', error.message);
+                    log('Failed to post tweet: ' + error.message, true);
                 }
             }, {
                 scheduled: true,
                 timezone: "America/New_York"
             });
         } catch (error) {
-            console.error(`Error scheduling tweet "${content}":`, error.message);
+            log(`Error scheduling tweet "${content}": ` + error.message, true);
         }
     });
 };
@@ -70,15 +80,15 @@ const autoRespondToMentions = async () => {
         mentions.data.forEach(async (mention) => {
             try {
                 await twitterClient.v2.reply(replyText, mention.id);
-                console.log(`Replied to mention ${mention.id}`);
+                log(`Replied to mention ${mention.id}`);
             } catch (error) {
-                console.error(`Failed to reply to mention ${mention.id}:`, error.message);
+                log(`Failed to reply to mention ${mention.id}: ` + error.message, true);
             }
         });
 
         sinceId = mentions.meta.newest_id;
     } catch (error) {
-        console.error('Failed to fetch mentions:', error.message);
+        log('Failed to fetch mentions: ' + error.message, true);
     }
 
     // Reschedule this task to run, say, every minute
