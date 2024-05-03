@@ -2,96 +2,93 @@ require('dotenv').config();
 const Twit = require('twit');
 const cron = require('node-cron');
 
-const twitterClient = new Twit({
-  consumer_key: process.env.CONSUMER_KEY,
-  consumer_secret: process.env.CONSUMER_SECRET,
-  access_token: process.env.ACCESS_TOKEN,
-  access_token_secret: process.env.ACCESS_TOKEN_SECRET,
-  timeout_ms: 60 * 1000,
+const twitterBotClient = new Twit({
+  consumer_key: process.env.TWITTER_CONSUMER_KEY,
+  consumer_secret: process.env.TWITTER_CONSUMER_SECRET,
+  access_token: process.env.TWITTER_ACCESS_TOKEN,
+  access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
+  timeout_ms: 60 * 1000, // 1 minute timeout
 });
 
-function postTweet() {
-  const tweetText = 'Hello, world!';
-  twitterClient.post('statuses/update', { status: tweetText }, (err, data) => {
-    if (err) {
-      console.error('Error during tweet posting:', err);
+function publishTweet() {
+  const message = 'Hello, world!';
+  twitterBotClient.post('statuses/update', { status: message }, (error, tweet) => {
+    if (error) {
+      console.error('Error posting tweet:', error);
     } else {
-      console.log('Posted:', data.text);
+      console.log('Successfully posted:', tweet.text);
     }
   });
 }
 
-cron.schedule('0 * * * *', postTweetEveryHour);
+cron.schedule('0 * * * *', function scheduledTweetPosting() {
+  console.log('Executing scheduled tweet posting every hour');
+  publishTweet();
+});
 
-function postTweetEveryHour() {
-  console.log('Running a task every hour');
-  postTweet();
-}
+const mentionsStream = twitterBotClient.stream('statuses/filter', { track: '@yourusername' });
 
-const stream = twitterClient.stream('statuses/filter', { track: '@yourusername' });
+mentionsStream
+  .on('tweet', handleMention)
+  .on('error', handleStreamError)
+  .on('disconnect', handleStreamDisconnect)
+  .on('limit', handleStreamLimit)
+  .on('reconnect', handleStreamReconnection)
+  .on('error', handleStreamError); 
 
-stream.on('tweet', onTweetMention)
-      .on('error', onStreamError)
-      .on('disconnect', onStreamDisconnect)
-      .on('limit', onStreamLimit)
-      .on('reconnect', onStreamReconnect)
-      .on('error', onStreamError);
-
-function onTweetMention(tweet) {
+function handleMention(tweet) {
   console.log('Mentioned by:', tweet.user.screen_name);
 }
 
-function onStreamError(error) {
-  console.error('Stream error:', error);
+function handleStreamError(error) {
+  console.error('Stream encountered an error:', error);
 }
 
-function onStreamDisconnect(disconnectMessage) {
-  console.error('Stream disconnected:', disconnectMessage);
+function handleStreamDisconnect(message) {
+  console.error('Stream disconnected:', message);
 }
 
-function onStreamLimit(limitMessage) {
-  console.error('Limit reached:', limitMessage);
+function handleStreamLimit(message) {
+  console.error('Stream hit limit:', message);
 }
 
-function onStreamReconnect(request, response, connectInterval) {
-  console.log('Reconnecting in ' + connectInterval + 'ms...');
+function handleStreamReconnection(request, response, reconnectInterval) {
+  console.log('Attempting reconnection in ' + reconnectInterval + 'ms...');
 }
 
-function retweetHashtag(hashtag) {
-  twitterClient.get('search/tweets', { q: hashtag, count: 10 }, (err, data) => {
-    if (err) {
-      console.error('Search Error:', err);
+function retweetBasedOnHashtag(hashtag) {
+  twitterBotClient.get('search/tweets', { q: hashtag, count: 10 }, (error, result) => {
+    if (error) {
+      console.error('Error during hashtag search:', error);
       return;
     }
 
-    if (data.statuses && data.statuses.length) {
-      const randomTweet = selectRandomTweet(data.statuses);
-      attemptRetweet(randomTweet);
+    if (result.statuses && result.statuses.length) {
+      const tweetToRetweet = getRandomTweet(result.statuses);
+      retweet(tweetToRetweet);
     } else {
       console.log('No tweets found for hashtag:', hashtag);
     }
   });
 }
 
-function selectRandomTweet(tweets) {
+function getRandomTweet(tweets) {
   return tweets[Math.floor(Math.random() * tweets.length)];
 }
 
-function attemptRetweet(tweet) {
+function retweet(tweet) {
   if (!tweet) return;
 
-  twitterClient.post('statuses/retweet/:id', { id: tweet.id_str }, (err, response) => {
-    if (err) {
-      console.error('Retweet Error:', err);
+  twitterBotClient.post('statuses/retweet/:id', { id: tweet.id_str }, (error) => {
+    if (error) {
+      console.error('Error during retweet:', error);
     } else {
-      console.log(`Retweeted: ${tweet.text}`);
+      console.log(`Successfully retweeted: ${tweet.text}`);
     }
   });
 }
 
-cron.schedule('*/30 * * * *', () => searchAndRetweet('#yourhashtag'));
-
-function searchAndRetweet(hashtag) {
-  console.log('Searching for hashtags to retweet.');
-  retweetHashtag(hashtag);
-}
+cron.schedule('*/30 * * * *', function findAndRetweetHashtag() {
+  console.log('Initiating hashtag search for retweeting.');
+  retweetBasedOnHashtag('#yourhashtag');
+});
