@@ -1,6 +1,8 @@
-require('dotenv').config()
-const Twit = require('twit')
-const T = new Twit({
+require('dotenv').config();
+
+const Twit = require('twit');
+
+const twitterClient = new Twit({
   consumer_key: process.env.TWITTER_CONSUMER_KEY,
   consumer_secret: process.env.TWITTER_CONSUMER_SECRET,
   access_token: process.env.TWITTER_ACCESS_TOKEN,
@@ -8,34 +10,40 @@ const T = new Twit({
   timeout_ms: 60 * 1000,
   strictSSL: true,
 });
-const RETWEET_CONFIG = {
-  hashtags: ['#exampleHashtag1', '#exampleHashtag2'],
-  result_type: 'recent',
-  count: 10,
-  retweet_rate: 60000,
+
+const retweetConfig = {
+  searchHashtags: ['#exampleHashtag1', '#exampleHashtag2'],
+  searchResultType: 'recent',
+  searchCount: 10,
+  retweetInterval: 60000,
 };
-const retweet = () => {
-  const query = RETWEET_CONFIG.hashtags.join(' OR ');
-  T.get('search/tweets', { q: query, count: RETWEET_CONFIG.count, result_type: RETWEET_CONFIG.result_type }, function(err, data) {
+
+const retweetBasedOnHashtags = () => {
+  const searchTerm = retweetConfig.searchHashtags.join(' OR ');
+  
+  twitterClient.get('search/tweets', { q: searchTerm, count: retweetConfig.searchCount, result_type: retweetConfig.searchResultType }, function(err, data) {
     if (!err) {
-      const tweets = data.statuses;
-      tweets.forEach(tweet => {
-        T.post('statuses/retweet/:id', { id: tweet.id_str }, function(err, response) {
+      const foundTweets = data.statuses;
+      
+      foundTweets.forEach(tweet => {
+        twitterClient.post('statuses/retweet/:id', { id: tweet.id_str }, (retweetErr, response) => {
           if (response) {
-            console.log('Retweeted: ', `https://twitter.com/${response.user.screen_name}/status/${response.id_str}`);
+            console.log('Retweeted:', `https://twitter.com/${response.user.screen_name}/status/${response.id_str}`);
           }
-          if (err) {
-            console.error('Retweet Error: ', err);
+          if (retweetErr) {
+            console.error('Retweet Failed:', retweetErr);
           }
         });
       });
     } else {
-      console.error('Search Error: ', err);
+      console.error('Search Failed:', err);
     }
   });
-}
-const startRetweeting = () => {
-  retweet();
-  setInterval(retweet, RETWEET_CONFIG.retweet_rate);
-}
-startRetweeting();
+};
+
+const initializeRetweetProcess = () => {
+  retweetBasedOnHashtags();
+  setInterval(retweetBasedOnHashtags, retweetConfig.retweetInterval);
+};
+
+initializeRetweetProcess();
