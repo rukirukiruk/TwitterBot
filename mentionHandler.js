@@ -12,37 +12,48 @@ const twitterBotClient = new Twit({
 
 const mentionsStream = twitterBotClient.stream('statuses/filter', { track: '@myBotUsername' });
 
-mentionsStream.on('tweet', (incomingTweet) => {
+mentionsStream.on('tweet', processIncomingTweet);
+
+function processIncomingTweet(incomingTweet) {
   const tweetContent = incomingTweet.text.toLowerCase(); // Case-insensitive comparison
   const userHandle = `@${incomingTweet.user.screen_name}`;
   const greeting = dynamicGreeting();
   
-  let replyMessage = `${userHandle} ${greeting} Thank you for the mention! If you need anything, just say the word.`;
+  let replyMessage = generateReplyMessage(userHandle, tweetContent, greeting);
 
+  if(replyMessage) {
+    sendReply(replyMessage);
+  }
+}
+
+const generateReplyMessage = (userHandle, tweetContent, greeting) => {
   if (tweetContent.includes('thanks')) {
-    replyMessage = `${userHandle} You're welcome! 😊`;
-  } else if (tweetContent.includes('how are you')) {
-    replyMessage = `${userHandle} I'm just a bot, but thank you for asking! ${greeting} How can I assist you today?`;
-  } else if (tweetContent.includes('tell me a joke')) {
-    replyMessage = `${userHandle} Why don't scientists trust atoms? Because they make up everything! 😂`;
-  } else if (tweetContent.includes('help')) {
-    replyMessage = `${userHandle} Sure, how can I help you? Feel free to ask me anything.`;
+    return `${userHandle} You're welcome! 😊`;
+  }
+  if (tweetContent.includes('how are you')) {
+    return `${userHandle} I'm just a bot, but thank you for asking! ${greeting} How can I assist you today?`;
+  }
+  if (tweetContent.includes('tell me a joke')) {
+    return `${userHandle} Why don't scientists trust atoms? Because they make up everything! 😂`;
+  }
+  if (tweetContent.includes('help')) {
+    return `${userHandle} Sure, how can I help you? Feel free to ask me anything.`;
   }
   
-  sendReply(replyMessage);
-});
+  // Default message if none of the conditions above are met
+  return `${userHandle} ${greeting} Thank you for the mention! If you need anything, just say the word.`;
+};
 
 const dynamicGreeting = () => {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good morning!";
-  if (hour < 18) return "Good afternoon!";
-  return "Good evening!";
+  return hour < 12 ? "Good morning!" : hour < 18 ? "Good afternoon!" : "Good evening!";
 };
 
 const sendReply = (replyText) => {
-  twitterBotClient.post('statuses/update', { status: replyText }, (error, sentTweet, response) => {
+  twitterBotClient.post('statuses/update', { status: replyText }, (error, sentTweet) => {
     if (error) {
       console.error(`Error while posting tweet: ${error}`);
+      // Optionally, implement a retry mechanism or logging for analysis
     } else {
       console.log(`Successfully posted tweet: ${sentTweet.text}`);
     }
