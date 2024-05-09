@@ -18,58 +18,63 @@ const retweetConfig = {
   retweetInterval: 60000,  // 1 minute
 };
 
-// Cache object
 let tweetSearchCache = {};
-// Introducing a cache expiry
 const cacheExpiry = 5 * 60 * 1000; // 5 minutes
 
 const retweetBasedOnHashtags = async () => {
   const searchTerm = retweetConfig.searchHashtags.join(' OR ');
   const currentTime = new Date().getTime();
 
-  // Check cache first
   if (tweetSearchCache[searchTerm] && (currentTime - tweetSearchCache[searchTerm].timestamp) < cacheExpiry) {
     console.log("Using cached search results.");
-    processTweets(tweetSearchCache[searchTerm].data);
+    await processTweets(tweetSearchCache[searchTerm].data).catch(error => {
+      console.error('Error processing tweets from cache:', error.message || error);
+    });
   } else {
     try {
       const { data } = await twitterClient.get('search/tweets', {
         q: searchTerm,
         count: retweetConfig.searchCount,
-        result_type: retweetConfig.searchResultType
+        result_type: retweetConfig.searchResultType,
       });
 
-      // Cache the search results along with the current timestamp
       tweetSearchCache[searchTerm] = {
         data,
-        timestamp: currentTime
+        timestamp: currentTime,
       };
 
-      processTweets(data);
+      await processTweets(data);
     } catch (err) {
-      console.error('Failed to search tweets or process them:', err);
+      console.error('Failed to search tweets or process them:', err.message || err);
     }
   }
 };
 
-const processTweets = (data) => {
-  const foundTweets = data.statuses;
+const processTweets = async (data) => {
+  const foundTweets = data.statuses || [];
 
   if (foundTweets.length === 0) {
     console.log("No tweets found for the hashtags specified.");
     return;
   }
 
-  foundTweets.forEach(tweet => {
+  const promises = foundTweets.map(tweet => new Promise((resolve, reject) => {
     twitterClient.post('statuses/retweet/:id', { id: tweet.id_str }, (retweetErr, response) => {
       if (response) {
         console.log('Retweeted:', `https://twitter.com/${response.user.screen_name}/status/${response.id_str}`);
-      }
-      if (retweetErr) {
-        console.error('Retweet Failed:', retweetErr);
+        resolve(response);
+      } else if (retweetErr) {
+        console.error('Retweet Failed:', retweetErr.message || retweetErr);
+        reject(retweetErr);
       }
     });
-  });
+  }));
+
+  try {
+    await Promise.all(promises);
+  } catch (errors) {
+    console.error('An error occurred during the retweet process.', errors);
+  }
 };
 
 const initializeRetweetProcess = () => {
