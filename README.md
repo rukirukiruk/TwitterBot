@@ -1,1 +1,11 @@
-This repository contains a module named `twitterClient.js`, designed to establish a secure connection with the Twitter API using the twit library. The module leverages environment variables to securely manage essential credentials: API key, API secret key, Access token, and Access token secret. It is engineered to provide a robust and reusable Twitter client instance across the application. Additionally, `twitterClient.js` encompasses a utility function enabling seamless tweet operations, facilitating other components of the application to send tweets effectively. This setup ensures a secure, maintainable, and efficient way to interact with the Twitter API, catering to the needs of applications requiring social media integration.
+# TwitterBot
+
+This repository contains `twitterClient.js`, a module crafted to securely connect with the Twitter API using the `twit` library. By utilizing environment variables, it safely manages credentials: API key, API secret key, Access token, and Access token secret.
+
+Designed for robustness and reusability, `twitterClient.js` provides a consistent Twitter client instance throughout the application. It also includes a utility function for seamless tweet operations, allowing easy tweet dispatch from various application components.
+
+This setup ensures secure, maintainable, and efficient interaction with the Twitter API, perfect for applications needing social media integration.
+
+---
+
+Feel free to adjust any details to better fit your project's specific context!
